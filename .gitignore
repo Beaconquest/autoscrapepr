@@ -1,2 +1,5 @@
 # Ignore .venv folder
 .venv
+
+# ignore honda_element.csv file
+honda_element.csv
