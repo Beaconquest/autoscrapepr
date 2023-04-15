@@ -1,45 +1,56 @@
 import requests
-from bs4 import BeautifulSoup
+import lxml # not working
 import csv
 
-URL_NB = 'https://www.kijiji.ca/b-new-brunswick/honda-element/k0l9005?rb=true&dc=true'
-URL_NS = 'https://www.kijiji.ca/b-nova-scotia/honda-element/k0l9002?rb=true&dc=true'
-honda_list = []
-honda_truck = {}
-response = requests.get(URL_NS).text
-soup = BeautifulSoup(response, 'lxml')
-search_results = soup.select('div.search-item.regular-ad')
+from bs4 import BeautifulSoup
 
-for truck in search_results: 
-    try:
-        date_posted = truck.find('span', class_="date-posted").text 
-        title_ad = truck.find('a', attrs={"class":"title"}).text.strip(' \n')
-        price = truck.find('div',attrs={"class":"price"}).text.strip(' \n')
-        description = truck.find('div', attrs={"class":"description"}).text.strip(' \n')[:100]
-        ad_link = truck.select_one('a.title')
-        
-        honda_truck = {
-            "date_posted": date_posted,
-            "title_ad": title_ad,
-            "price": price,
-            "description": description,
-            "ad_link": f"https://www.kijiji.ca{ad_link['href']}",
-            }
+search_sites = {
+    'New Brunswick': 'https://www.kijiji.ca/b-new-brunswick/honda-element/k0l9005?rb=true&dc=true',
+    'Nova Scotia' : 'https://www.kijiji.ca/b-nova-scotia/honda-element/k0l9002?rb=true&dc=true',
+    'PEI' : 'https://www.kijiji.ca/b-prince-edward-island/honda-element/k0l9011?rb=true&dc=true',
+    'Quebec': 'https://www.kijiji.ca/b-quebec/honda-element/k0l9001?dc=true'
+    }
 
-        honda_list.append(honda_truck)
 
-        #terminal out for testing
-        print(f'''
-        Date Posted: {date_posted}
-        Ad title: {title_ad}
-        Price: {price}
-        Description: {description}
-        Link: https://www.kijiji.ca{ad_link["href"]}
-        ''')
-        print('*' * 100)
-    except AttributeError:
-        continue
-print(len(honda_list))   
+for k, v in search_sites.items():
+    honda_list = []
+    honda_truck = {}
+
+    print(f'{k} search results:')
+    response = requests.get(v).text
+    soup = BeautifulSoup(response, features='html.parser')
+    search_results = soup.select('div.search-item.regular-ad')
+
+    for truck in search_results: 
+        try:
+            date_posted = truck.find('span', class_="date-posted").text 
+            title_ad = truck.find('a', attrs={"class":"title"}).text.strip(' \n')
+            price = truck.find('div',attrs={"class":"price"}).text.strip(' \n')
+            description = truck.find('div', attrs={"class":"description"}).text.strip(' \n')[:100]
+            ad_link = truck.select_one('a.title')
+            
+            honda_truck = {
+                "date_posted": date_posted,
+                "title_ad": title_ad,
+                "price": price,
+                "description": description,
+                "ad_link": f"https://www.kijiji.ca{ad_link['href']}",
+                }
+
+            honda_list.append(honda_truck)
+
+            #terminal out for testing
+            print(f'''
+            Date Posted: {date_posted}
+            Ad title: {title_ad}
+            Price: {price}
+            Description: {description}
+            Link: https://www.kijiji.ca{ad_link["href"]}
+            ''')
+            print('*' * 100)
+        except AttributeError:
+            continue
+    print(f'Total {k} results:', len(honda_list))   
 
 
 with open("honda_element.csv", 'w') as csv_file:
@@ -58,4 +69,3 @@ with open("honda_element.csv", 'w') as csv_file:
             'ad_link': f'{honda_list[i]["ad_link"]}', 
             }
         csv_writer.writerow(write_to_row)
-
